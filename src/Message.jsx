@@ -75,7 +75,7 @@ export default function Message({ message: m, features = {}, onPreview }) {
         {waiting &&
           (m.queue > 0 ? (
             <div className="status">
-              Waiting in line — you're <strong>#{m.queue}</strong>. HFee is busy with other people.
+              Waiting in line: you're <strong>#{m.queue}</strong>. HFee is busy with other people.
             </div>
           ) : (
             !m.steps?.some((s) => s.status === 'running') && <span className="typing"><i /><i /><i /></span>

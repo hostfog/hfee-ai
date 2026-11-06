@@ -282,7 +282,7 @@ async function runTool(turn, { name, args }) {
     case 'create_image': {
       const prompt = str(args.prompt);
       if (!turn.canMakeImage()) return "The user has reached today's image limit. Tell them.";
-      const s = turn.step('Creating an image — about a minute', { detail: prompt });
+      const s = turn.step('Creating an image (about a minute)', { detail: prompt });
       try {
         const id = await makeImage(turn, prompt);
         const image = { id, kind: 'image', name: `${prompt.slice(0, 40)}.png`, url: `/api/images/${id}`, size: 0 };

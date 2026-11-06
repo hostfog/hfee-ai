@@ -57,7 +57,7 @@ export default function Composer({
         onChange={(e) => onChange(e.target.value)}
         onKeyDown={handleKeyDown}
         onPaste={handlePaste}
-        placeholder={imageMode ? 'Describe the image you want…' : research ? 'What should HFee research?' : 'Message HFee...'}
+        placeholder={imageMode ? 'Describe the image you want…' : research ? 'What should HFee research?' : 'Message HFee…'}
         rows={1}
         autoFocus
       />

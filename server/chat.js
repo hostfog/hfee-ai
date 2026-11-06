@@ -141,7 +141,7 @@ chatRoutes.post('/send', async (req, res) => {
 
   try {
     if (wantImage) {
-      const s = turn.step('Creating an image — about a minute', { detail: content });
+      const s = turn.step('Creating an image (about a minute)', { detail: content });
       const id = await makeImage(turn, content);
       turn.files.push({ id, kind: 'image', name: `${content.slice(0, 40)}.png`, url: `/api/images/${id}`, size: 0 });
       send({ files: turn.files });

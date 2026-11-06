@@ -1,9 +1,8 @@
 # HFee AI
 
-A private AI assistant site in the HF Panel look. Chat runs on
-[HFee](https://github.com/hostfog/hfee) (or any OpenAI-compatible endpoint);
-optional open-source engines add vision, image generation, voice, web search
-and a Python sandbox.
+A self-hosted AI assistant. Chat runs on [HFee](https://github.com/hostfog/hfee)
+or any OpenAI-compatible API; optional open-source engines add vision, image
+generation, voice, web search and a Python sandbox.
 
 React + Vite frontend, Express backend, SQLite (built into Node 22).
 

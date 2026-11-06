@@ -8,8 +8,8 @@ import { CheckIcon, CopyIcon, DownloadIcon, EyeIcon, PlayIcon } from './icons';
 const PREVIEWABLE = ['html', 'svg', 'xml'];
 const EXTENSIONS = { python: 'py', javascript: 'js', typescript: 'ts', html: 'html', css: 'css', json: 'json', go: 'go', bash: 'sh', shell: 'sh', sql: 'sql', svg: 'svg', markdown: 'md', yaml: 'yml' };
 
-// Markdown renders a reply. Code blocks get copy, download and — where the
-// features allow — run (Python) and preview (HTML/SVG) buttons.
+// Markdown renders a reply. Code blocks get copy and download buttons, plus
+// Run (Python) and Preview (HTML/SVG) when those features are on.
 export default function Markdown({ text, features = {}, onPreview }) {
   return (
     <div className="markdown">

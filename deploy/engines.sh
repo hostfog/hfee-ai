@@ -29,7 +29,7 @@ build() {
   if [[ -f "$src/.built" && "$(cat "$src/.built")" == "$ref" ]]; then
     return
   fi
-  step "Building $name ($ref) — this takes a few minutes"
+  step "Building $name ($ref), takes a few minutes"
   rm -rf "$src"
   git init -q "$src"
   git -C "$src" fetch -q --depth 1 "https://github.com/$repo" "$ref"
