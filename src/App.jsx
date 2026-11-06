@@ -116,6 +116,7 @@ function SignedIn({ user, route, onSignOut }) {
       onSettings={() => setSettingsOpen(true)}
       onSignOut={onSignOut}
       features={config.features}
+      desktop={config.desktop}
     >
       {page}
       {settingsOpen && <Settings onClose={() => setSettingsOpen(false)} />}

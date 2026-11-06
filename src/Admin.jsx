@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { request } from './api';
+import { TrashIcon } from './icons';
 
 const TABS = ['Overview', 'Users', 'Plans', 'Site'];
 
@@ -277,6 +278,8 @@ function Site() {
         Allow new sign-ups
       </label>
 
+      <Models models={s.models} onChange={(models) => setS({ ...s, models })} />
+
       <div className="field">
         Models users can pick
         {s.models.map((m) => (
@@ -285,7 +288,6 @@ function Site() {
             {m}
           </label>
         ))}
-        <span className="hint">Add models on the server with: hfee pull &lt;model&gt;</span>
       </div>
 
       <label className="field">
@@ -306,6 +308,92 @@ function Site() {
         <button className="primary small" onClick={save}>Save</button>
         {status && <span className="hint">{status}</span>}
       </div>
+    </div>
+  );
+}
+
+// Models downloads and removes models on the model server, with live progress.
+export function Models({ models, onChange, suggest = '' }) {
+  const [name, setName] = useState(suggest);
+  const [progress, setProgress] = useState(null); // { status, percent }
+  const [error, setError] = useState('');
+
+  async function pull(e) {
+    e.preventDefault();
+    if (!name.trim() || progress) return;
+    setError('');
+    setProgress({ status: 'Starting…', percent: 0 });
+    try {
+      const res = await fetch('/api/admin/models/pull', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ model: name.trim() }),
+      });
+      if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || 'Download failed');
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop();
+        for (const line of lines.filter(Boolean)) {
+          const p = JSON.parse(line);
+          if (p.error) throw new Error(p.error);
+          setProgress({ status: p.status, percent: p.total ? Math.round((p.completed / p.total) * 100) : null });
+        }
+      }
+      const { models: list } = await request('/admin/settings');
+      onChange(list);
+      setName('');
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setProgress(null);
+    }
+  }
+
+  async function remove(m) {
+    if (!confirm(`Delete ${m} from the server?`)) return;
+    try {
+      await request(`/admin/models/${encodeURIComponent(m)}`, { method: 'DELETE' });
+      onChange(models.filter((x) => x !== m));
+    } catch (err) {
+      setError(err.message);
+    }
+  }
+
+  return (
+    <div className="field">
+      {models.length > 0 && (
+        <>
+          Installed models
+          <ul className="memories">
+            {models.map((m) => (
+              <li key={m}>
+                <span>{m}</span>
+                <button onClick={() => remove(m)} aria-label={`Delete ${m}`}>
+                  <TrashIcon size={14} />
+                </button>
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+      <form className="row" onSubmit={pull}>
+        <input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. qwen2.5:7b or hf.co/user/repo:Q4_K_M" />
+        <button className="primary small" disabled={Boolean(progress)}>Download</button>
+      </form>
+      {progress && (
+        <div className="progress">
+          <span style={{ width: `${progress.percent ?? 0}%` }} />
+          <small>{progress.status}{progress.percent != null ? ` · ${progress.percent}%` : ''}</small>
+        </div>
+      )}
+      {error && <div className="notice">{error}</div>}
     </div>
   );
 }

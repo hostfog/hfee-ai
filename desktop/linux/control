@@ -1,0 +1,11 @@
+Package: hfee-ai
+Version: @VERSION@
+Architecture: @ARCH@
+Maintainer: HostFog Ltd <param130698@gmail.com>
+Homepage: https://github.com/hostfog/hfee-ai
+Section: utils
+Priority: optional
+Depends: xdg-utils
+Description: HFee AI desktop app
+ Chat with AI models that run on your own computer. Starts the HFee
+ model runner and opens HFee AI in your browser.

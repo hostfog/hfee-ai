@@ -36,9 +36,57 @@ npm run server         # API on :3001 (Node 22.13+)
 npm run dev            # UI on :5173
 ```
 
+## Ways to run it
+
+| Where | How |
+| --- | --- |
+| Linux server | `install.sh` (below) |
+| Docker | `docker compose up -d` (below) |
+| Windows, macOS, Linux desktop | Download the app from [Releases](https://github.com/hostfog/hfee-ai/releases) |
+| Phone | Open your site and choose **Add to Home Screen** / **Install app**, or build the Android and iOS apps in [`mobile/`](mobile/README.md) |
+
+## Desktop app
+
+The desktop app runs everything on your own computer: no account, no
+internet needed after the model is downloaded. It starts HFee and the site,
+opens your browser, and stops when you choose **Quit**. On first start it
+asks you to download a model (qwen2.5:3b, about 2 GB, is a good start).
+
+Models are shared with the `hfee` command line in `~/.hfee/models`; chats are
+kept in `%AppData%\HFee AI`, `~/Library/Application Support/HFee AI` or
+`~/.config/hfee-ai`.
+
+To build it yourself (needs Node 22 and Go):
+
+```bash
+HFEE_SRC=../hfee bash desktop/build.sh linux amd64     # or darwin arm64, windows amd64
+```
+
+The macOS app is not notarised yet: the first time, right-click it and choose
+**Open**. Windows SmartScreen may ask you to confirm the same way.
+
+## Docker
+
+```bash
+echo "SEARXNG_SECRET=$(openssl rand -hex 32)" > .env.docker
+docker compose --env-file .env.docker up -d
+docker compose logs -f hfee-ai      # first start downloads the models
+```
+
+Open http://localhost:3001; the first account you create is the admin.
+For HTTPS on a domain, add `DOMAIN=chat.example.com` to `.env.docker` and
+start with `--profile https`.
+
+The default image has every feature (about 12 GB of models on first start).
+Add `HFEE_TARGET=lite` to `.env.docker` for chat only. Other settings
+(`AI_MODEL`, `ALLOW_SIGNUP`, `DAILY_MESSAGES`, `HFEE_NUM_CTX`, `SD_TYPE`) go
+in the same file. To build with a local checkout of HFee:
+`docker build --build-context hfee=../hfee .`
+
 ## Put it online
 
-You need an Ubuntu 22.04/24.04 (or Debian 12) server and a domain.
+You need a server running Ubuntu 22.04/24.04, Debian 12, Rocky Linux or
+AlmaLinux 9, CentOS Stream 9 or Fedora, and a domain.
 For the full feature set, plan for 8+ cores, 32+ GB RAM and ~25 GB of disk.
 
 1. Point your domain at the server with a DNS **A record**.

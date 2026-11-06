@@ -1,0 +1,59 @@
+# HFee AI with Docker.
+#
+#   echo "SEARXNG_SECRET=$(openssl rand -hex 32)" > .env.docker
+#   docker compose --env-file .env.docker up -d                  # http://localhost:3001
+#   DOMAIN=chat.example.com docker compose --env-file .env.docker --profile https up -d
+#
+# First start downloads the chat model (about 2 GB) and, in the full image,
+# the voice, vision and image models (about 10 GB). Follow it with
+#   docker compose logs -f hfee-ai
+
+services:
+  hfee-ai:
+    build:
+      context: .
+      target: ${HFEE_TARGET:-full} # "lite" for chat only
+    image: ghcr.io/hostfog/hfee-ai:${HFEE_TARGET:-full}
+    init: true
+    restart: unless-stopped
+    ports:
+      - "${HFEE_PORT:-3001}:3001"
+    volumes:
+      - hfee-data:/data
+    environment:
+      AI_MODEL: ${AI_MODEL:-qwen2.5:3b}
+      HFEE_NUM_CTX: ${HFEE_NUM_CTX:-8192}
+      HFEE_NUM_PARALLEL: ${HFEE_NUM_PARALLEL:-4}
+      MAX_PARALLEL: ${HFEE_NUM_PARALLEL:-4}
+      ALLOW_SIGNUP: ${ALLOW_SIGNUP:-true}
+      DAILY_MESSAGES: ${DAILY_MESSAGES:-200}
+      SINGLE_USER: ${SINGLE_USER:-false}
+      SD_TYPE: ${SD_TYPE:-}
+      SEARXNG_URL: http://searxng:8080
+      TRUST_PROXY: uniquelocal
+    depends_on:
+      - searxng
+
+  searxng:
+    image: docker.io/searxng/searxng:latest
+    restart: unless-stopped
+    environment:
+      SEARXNG_SECRET: ${SEARXNG_SECRET:?create .env.docker first, see the top of compose.yaml}
+      GRANIAN_HOST: 0.0.0.0 # works on hosts without IPv6
+    volumes:
+      - ./docker/searxng/settings.yml:/etc/searxng/settings.yml:ro
+
+  caddy:
+    profiles: [https]
+    image: docker.io/library/caddy:2
+    restart: unless-stopped
+    command: caddy reverse-proxy --from ${DOMAIN:-localhost} --to hfee-ai:3001
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - caddy-data:/data
+
+volumes:
+  hfee-data:
+  caddy-data:

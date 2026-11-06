@@ -131,3 +131,43 @@ adminRoutes.put('/settings', (req, res) => {
   if (typeof b.systemPrompt === 'string' && b.systemPrompt.trim()) setSetting('system_prompt', b.systemPrompt.slice(0, 4000));
   res.json({ ok: true });
 });
+
+// --- models ----------------------------------------------------------------
+// These talk to HFee's own API (Ollama-compatible), next to its /v1 endpoint.
+
+const runnerURL = (path) => process.env.AI_BASE_URL.replace(/\/v1\/?$/, '') + path;
+
+adminRoutes.post('/models/pull', async (req, res) => {
+  const model = String(req.body.model || '').trim();
+  if (!model) return res.status(400).json({ error: 'Enter a model name' });
+
+  const controller = new AbortController();
+  res.on('close', () => controller.abort());
+  try {
+    const upstream = await fetch(runnerURL('/api/pull'), {
+      method: 'POST',
+      body: JSON.stringify({ model }),
+      signal: controller.signal,
+    });
+    if (!upstream.ok) {
+      const { error } = await upstream.json().catch(() => ({}));
+      return res.status(upstream.status).json({ error: error || 'The model server refused the download' });
+    }
+    res.setHeader('Content-Type', 'application/x-ndjson');
+    for await (const chunk of upstream.body) res.write(chunk);
+    res.end();
+  } catch (err) {
+    if (controller.signal.aborted) return;
+    if (!res.headersSent) res.status(502).json({ error: 'The model server is not reachable' });
+    else res.end();
+  }
+});
+
+adminRoutes.delete('/models/:name', async (req, res) => {
+  const upstream = await fetch(runnerURL('/api/delete'), {
+    method: 'DELETE',
+    body: JSON.stringify({ model: req.params.name }),
+  }).catch(() => null);
+  if (!upstream?.ok) return res.status(502).json({ error: "Couldn't delete the model" });
+  res.json({ ok: true });
+});

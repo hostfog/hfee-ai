@@ -4,7 +4,7 @@ import path from 'node:path';
 import { Router } from 'express';
 import { db, tx, getSetting, limitsFor, startOfDay, DATA_DIR } from './db.js';
 import { requireUser } from './auth.js';
-import { features, search, VISION_MODEL } from './engines.js';
+import { features, search, defaultModel, VISION_MODEL } from './engines.js';
 import { Turn, chat as runChat, research, makeImage, toolPrompt } from './agent.js';
 
 const MAX_HISTORY = 20;
@@ -131,7 +131,7 @@ chatRoutes.post('/send', async (req, res) => {
 
   const model = files.some((f) => f.kind === 'image') && features.vision
     ? VISION_MODEL
-    : req.body.model || chat.model || getSetting('default_model', process.env.AI_MODEL);
+    : req.body.model || chat.model || (await defaultModel());
 
   const imagesToday = () => db.prepare('SELECT COUNT(*) AS n FROM images WHERE user_id = ? AND created_at >= ?').get(user.id, startOfDay()).n;
   const turn = new Turn({

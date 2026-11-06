@@ -5,3 +5,4 @@ data/
 hfee-ai-server/
 hfee-ai-server.tar.gz
 hfee-ai-server.zip
+.env.docker

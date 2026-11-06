@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Installs or updates HFee AI on a fresh Ubuntu/Debian server:
+# Installs or updates HFee AI on a fresh server (Ubuntu, Debian, Rocky,
+# AlmaLinux, CentOS Stream or Fedora):
 # HFee (model runner) + the website + Caddy for HTTPS.
 #
 #   sudo bash install.sh --domain chat.example.com --email you@example.com
@@ -45,9 +46,10 @@ done
 
 [[ -n "$DOMAIN" && -n "$EMAIL" ]] || usage
 [[ $EUID -eq 0 ]] || { echo "Run as root (sudo)." >&2; exit 1; }
-command -v apt-get >/dev/null || { echo "This installer supports Ubuntu and Debian." >&2; exit 1; }
 
 HERE="$(cd "$(dirname "$0")" && pwd)"
+# shellcheck source-path=SCRIPTDIR source=os.sh
+. "$HERE/os.sh"
 APP_DIR=/opt/hfee-ai
 DATA_DIR=/var/lib/hfee
 
@@ -57,26 +59,11 @@ case "$(uname -m)" in
   *) echo "Unsupported CPU: $(uname -m)" >&2; exit 1 ;;
 esac
 
-step() { printf '\n\033[1;38;2;216;120;88m==>\033[0m %s\n' "$*"; }
-
-step "Installing system packages"
-export DEBIAN_FRONTEND=noninteractive
-apt-get update -qq
-apt-get install -y -qq curl ca-certificates gnupg debian-keyring debian-archive-keyring apt-transport-https ufw >/dev/null
-
-if ! node -e 'process.exit(+process.versions.node.split(".")[0] >= 22 ? 0 : 1)' 2>/dev/null; then
-  step "Installing Node.js 22"
-  curl -fsSL https://deb.nodesource.com/setup_22.x | bash - >/dev/null
-  apt-get install -y -qq nodejs >/dev/null
-fi
-
-if ! command -v caddy >/dev/null; then
-  step "Installing Caddy"
-  curl -fsSL https://dl.cloudsmith.io/public/caddy/stable/gpg.key | gpg --dearmor --yes -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
-  curl -fsSL https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt >/etc/apt/sources.list.d/caddy-stable.list
-  apt-get update -qq
-  apt-get install -y -qq caddy >/dev/null
-fi
+step "Installing system packages ($PRETTY_NAME)"
+pkg_update
+pkg_install curl ca-certificates gnupg debian-keyring debian-archive-keyring apt-transport-https
+install_node
+install_caddy
 
 step "Creating the hfee user and folders"
 id hfee >/dev/null 2>&1 || useradd --system --home "$DATA_DIR" --shell /usr/sbin/nologin hfee
@@ -202,14 +189,11 @@ $DOMAIN {
 	}
 }
 EOF
+allow_proxy
 systemctl enable caddy >/dev/null
 systemctl reload caddy 2>/dev/null || systemctl restart caddy
 
-step "Opening the firewall (SSH, HTTP, HTTPS)"
-ufw allow OpenSSH >/dev/null
-ufw allow 80/tcp >/dev/null
-ufw allow 443/tcp >/dev/null
-ufw --force enable >/dev/null
+open_firewall
 
 IP="$(curl -fs https://api.ipify.org || echo '<server IP>')"
 cat <<EOF

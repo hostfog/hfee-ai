@@ -1,14 +1,21 @@
 name: Release
 
+# Tag a version (git tag v1.0.0 && git push --tags) to publish:
+#   - the server package (install.sh for Linux servers)
+#   - desktop apps for Windows, macOS and Linux
+#   - the Android app (needs the HFEE_URL repository variable)
+#   - Docker images on ghcr.io
+
 on:
   push:
     tags: ['v*']
 
 permissions:
   contents: write
+  packages: write
 
 jobs:
-  release:
+  server:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -22,7 +29,7 @@ jobs:
           cache: npm
       - uses: actions/setup-go@v5
         with:
-          go-version: '1.22'
+          go-version-file: hfee/go.mod
       - name: Build the server package
         run: |
           HFEE_SRC=hfee bash deploy/package.sh
@@ -32,3 +39,130 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: gh release create "$GITHUB_REF_NAME" hfee-ai-server.tar.gz hfee-ai-server.zip --generate-notes
+
+  desktop:
+    needs: server
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { runner: ubuntu-latest, os: linux, arch: amd64 }
+          - { runner: ubuntu-24.04-arm, os: linux, arch: arm64 }
+          - { runner: macos-latest, os: darwin, arch: arm64 }
+          - { runner: macos-latest, os: darwin, arch: amd64 }
+          - { runner: windows-latest, os: windows, arch: amd64 }
+    runs-on: ${{ matrix.runner }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: hostfog/hfee
+          path: hfee
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: hfee/go.mod
+          cache-dependency-path: hfee/go.mod
+      - name: Build
+        run: VERSION="${GITHUB_REF_NAME#v}" HFEE_SRC=hfee bash desktop/build.sh ${{ matrix.os }} ${{ matrix.arch }}
+      - name: Windows installer
+        if: matrix.os == 'windows'
+        shell: pwsh
+        run: |
+          $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          if (-not (Test-Path $iscc)) { choco install innosetup -y --no-progress }
+          & $iscc /Q "/DVersion=$($env:GITHUB_REF_NAME.TrimStart('v'))" desktop\windows\hfee-ai.iss
+      - name: Upload
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          shopt -s nullglob
+          gh release upload "$GITHUB_REF_NAME" desktop/build/*.{tar.gz,deb,dmg,zip,exe} --clobber
+
+  android:
+    needs: server
+    if: vars.HFEE_URL != ''
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - run: npm ci
+      - run: npm run android
+        env:
+          HFEE_URL: ${{ vars.HFEE_URL }}
+      - name: Build the APK
+        env:
+          KEYSTORE: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          out="$PWD/hfee-ai-$version-android.apk"
+          if [[ -z "$KEYSTORE" ]]; then
+            echo "::warning::No signing key set; publishing a debug build"
+            (cd android && ./gradlew -q assembleDebug)
+            cp android/app/build/outputs/apk/debug/app-debug.apk "$out"
+          else
+            (cd android && ./gradlew -q assembleRelease)
+            echo "$KEYSTORE" | base64 -d > release.jks
+            tools=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)
+            "$tools/zipalign" -f 4 android/app/build/outputs/apk/release/app-release-unsigned.apk aligned.apk
+            "$tools/apksigner" sign --ks release.jks --ks-pass env:KEYSTORE_PASSWORD --ks-key-alias "$KEY_ALIAS" --out "$out" aligned.apk
+            rm release.jks aligned.apk
+          fi
+          gh release upload "$GITHUB_REF_NAME" "$out" --clobber
+
+  docker:
+    needs: server
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: hostfog/hfee
+          path: hfee
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+      - name: Image name
+        id: name
+        run: echo "image=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_OUTPUT"
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          target: lite
+          build-contexts: hfee=./hfee
+          push: true
+          tags: ${{ steps.name.outputs.image }}:lite,${{ steps.name.outputs.image }}:${{ github.ref_name }}-lite
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          target: full
+          build-contexts: hfee=./hfee
+          push: true
+          tags: ${{ steps.name.outputs.image }}:full,${{ steps.name.outputs.image }}:latest,${{ steps.name.outputs.image }}:${{ github.ref_name }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

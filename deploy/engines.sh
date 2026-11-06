@@ -9,22 +9,15 @@ ENG=/opt/hfee-engines
 DATA=/var/lib/hfee/engines
 ENV_FILE=/opt/hfee-ai/.env
 
-# Pinned versions so every server builds the same thing.
-WHISPER_REF=v1.9.5
-LLAMA_REF=b12169
-SD_REF=f5df5f8b84f139f1e80496902da90798a0d92896
-
-HF=https://huggingface.co
-WHISPER_MODEL=ggml-small-q5_1.bin
-VISION_MODEL=Qwen2.5-VL-3B-Instruct-Q4_K_M.gguf
-VISION_PROJ=mmproj-Qwen2.5-VL-3B-Instruct-Q8_0.gguf
-SD_MODEL=sdxl_lightning_4step.safetensors
-VOICE=en_GB-alba-medium
-
-step() { printf '\n\033[1;38;2;216;120;88m==>\033[0m %s\n' "$*"; }
+# shellcheck source-path=SCRIPTDIR source=os.sh
+. "$(dirname "$0")/os.sh"
+# shellcheck source-path=SCRIPTDIR source=versions.sh
+. "$(dirname "$0")/versions.sh"
 
 step "Installing build tools"
-apt-get install -y -qq build-essential cmake git ffmpeg bubblewrap python3-venv docker.io >/dev/null
+enable_extra_repos
+pkg_install build-essential cmake git ffmpeg bubblewrap python3-venv openssl util-linux
+install_containers
 mkdir -p "$ENG/bin" "$ENG/src" "$DATA"
 THREADS="$(nproc)"
 
@@ -42,9 +35,16 @@ build() {
   git -C "$src" fetch -q --depth 1 "https://github.com/$repo" "$ref"
   git -C "$src" checkout -q FETCH_HEAD
   git -C "$src" submodule update -q --init --recursive --depth 1
-  cmake -S "$src" -B "$src/build" -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=OFF -DGGML_NATIVE=ON \
-    -DLLAMA_CURL=OFF -DWHISPER_BUILD_TESTS=OFF -DLLAMA_BUILD_TESTS=OFF >/dev/null
-  cmake --build "$src/build" -j "$THREADS" --target "$@" >/dev/null
+  # Compiler output goes to build.log and is only shown if the build fails.
+  if ! {
+    cmake -S "$src" -B "$src/build" -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=OFF -DGGML_NATIVE=ON \
+      -DLLAMA_CURL=OFF -DWHISPER_BUILD_TESTS=OFF -DLLAMA_BUILD_TESTS=OFF &&
+      cmake --build "$src/build" -j "$THREADS" --target "$@"
+  } >"$ENG/src/$name.log" 2>&1; then
+    tail -n 40 "$ENG/src/$name.log" >&2
+    echo "Building $name failed; full log: $ENG/src/$name.log" >&2
+    exit 1
+  fi
   for target in "$@"; do
     install -m 755 "$src/build/bin/$target" "$ENG/bin/$target"
   done
@@ -64,10 +64,10 @@ build whisper.cpp ggml-org/whisper.cpp "$WHISPER_REF" whisper-server
 build llama.cpp ggml-org/llama.cpp "$LLAMA_REF" llama-server
 build stable-diffusion.cpp leejet/stable-diffusion.cpp "$SD_REF" sd-cli
 
-fetch "$HF/ggerganov/whisper.cpp/resolve/main/$WHISPER_MODEL" "$DATA/$WHISPER_MODEL"
-fetch "$HF/ggml-org/Qwen2.5-VL-3B-Instruct-GGUF/resolve/main/$VISION_MODEL" "$DATA/$VISION_MODEL"
-fetch "$HF/ggml-org/Qwen2.5-VL-3B-Instruct-GGUF/resolve/main/$VISION_PROJ" "$DATA/$VISION_PROJ"
-fetch "$HF/ByteDance/SDXL-Lightning/resolve/main/$SD_MODEL" "$DATA/$SD_MODEL"
+fetch "$WHISPER_DOWNLOAD" "$DATA/$WHISPER_MODEL"
+fetch "$VISION_REPO/$VISION_MODEL_FILE" "$DATA/$VISION_MODEL_FILE"
+fetch "$VISION_REPO/$VISION_PROJ" "$DATA/$VISION_PROJ"
+fetch "$SD_DOWNLOAD" "$DATA/$SD_MODEL_FILE"
 
 step "Setting up Python (Piper voice and the code sandbox)"
 [[ -x "$ENG/py/bin/python" ]] || python3 -m venv "$ENG/py"
@@ -88,8 +88,7 @@ search:
   formats: [html, json]
 EOF
 fi
-systemctl enable --now docker >/dev/null
-docker pull -q searxng/searxng:latest >/dev/null
+docker pull -q docker.io/searxng/searxng:latest >/dev/null
 
 chown -R hfee:hfee "$DATA"
 
@@ -120,17 +119,16 @@ EOF
 unit hfee-whisper "HFee speech recognition" \
   "$ENG/bin/whisper-server -m $DATA/$WHISPER_MODEL --host 127.0.0.1 --port 8091 -t 4"
 unit hfee-vision "HFee image understanding" \
-  "$ENG/bin/llama-server -m $DATA/$VISION_MODEL --mmproj $DATA/$VISION_PROJ --host 127.0.0.1 --port 8092 -c 8192 -t $THREADS --alias qwen2.5-vl"
+  "$ENG/bin/llama-server -m $DATA/$VISION_MODEL_FILE --mmproj $DATA/$VISION_PROJ --host 127.0.0.1 --port 8092 -c 8192 -t $THREADS --alias qwen2.5-vl"
 
 cat >/etc/systemd/system/hfee-search.service <<EOF
 [Unit]
 Description=HFee web search (SearXNG)
-After=docker.service
-Requires=docker.service
+$(container_unit_deps)
 
 [Service]
 ExecStartPre=-/usr/bin/docker rm -f hfee-searxng
-ExecStart=/usr/bin/docker run --rm --name hfee-searxng -p 127.0.0.1:8093:8080 -v $DATA/searxng:/etc/searxng searxng/searxng:latest
+ExecStart=/usr/bin/docker run --rm --name hfee-searxng -e GRANIAN_HOST=0.0.0.0 -p 127.0.0.1:8093:8080 -v $DATA/searxng:/etc/searxng:Z docker.io/searxng/searxng:latest
 ExecStop=/usr/bin/docker stop hfee-searxng
 Restart=always
 RestartSec=5
@@ -156,7 +154,7 @@ WHISPER_URL=http://127.0.0.1:8091
 PIPER_BIN=$ENG/py/bin/piper
 PIPER_VOICE=$DATA/$VOICE.onnx
 SD_BIN=$ENG/bin/sd-cli
-SD_MODEL=$DATA/$SD_MODEL
+SD_MODEL=$DATA/$SD_MODEL_FILE
 SD_SIZE=768
 SD_STEPS=4
 SD_CFG=1

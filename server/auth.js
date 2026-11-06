@@ -48,7 +48,25 @@ function readCookie(req, name) {
 }
 
 // requireUser rejects requests without a valid session and sets req.user.
+// In single-user mode (the desktop app) there is no sign-in: everyone who
+// can reach the server, which only listens on this computer, is the owner.
+const SINGLE_USER = process.env.SINGLE_USER === 'true';
+
+function localUser() {
+  let user = db.prepare('SELECT id, email, name, role, disabled, plan_id, instructions FROM users ORDER BY id LIMIT 1').get();
+  if (!user) {
+    db.prepare('INSERT INTO users (email, name, password, role, created_at) VALUES (?, ?, ?, ?, ?)')
+      .run('you@localhost', process.env.SINGLE_USER_NAME || 'You', '!', 'admin', Date.now());
+    user = db.prepare('SELECT id, email, name, role, disabled, plan_id, instructions FROM users ORDER BY id LIMIT 1').get();
+  }
+  return { ...user, local: true };
+}
+
 export function requireUser(req, res, next) {
+  if (SINGLE_USER) {
+    req.user = localUser();
+    return next();
+  }
   const token = readCookie(req, COOKIE);
   const user = token && db.prepare(`
     SELECT u.id, u.email, u.name, u.role, u.disabled, u.plan_id, u.instructions
@@ -69,7 +87,7 @@ export function requireAdmin(req, res, next) {
   });
 }
 
-const publicUser = (u) => ({ id: Number(u.id), email: u.email, name: u.name, role: u.role });
+const publicUser = (u) => ({ id: Number(u.id), email: u.email, name: u.name, role: u.role, local: Boolean(u.local) });
 
 // Slow down password guessing: 10 attempts per IP per 15 minutes.
 const attempts = new Map();

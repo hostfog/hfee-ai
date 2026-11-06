@@ -7,7 +7,7 @@ import {
 } from './icons';
 
 // Shell is the frame around every signed-in page: top bar and sidebar.
-export default function Shell({ user, route, chats, projects, query, onQuery, onChatsChanged, onProjectsChanged, onSettings, onSignOut, features, children }) {
+export default function Shell({ user, route, chats, projects, query, onQuery, onChatsChanged, onProjectsChanged, onSettings, onSignOut, features, desktop, children }) {
   const [open, setOpen] = useState(false);
   const [renaming, setRenaming] = useState(null);
 
@@ -44,6 +44,12 @@ export default function Shell({ user, route, chats, projects, query, onQuery, on
     : route.page === 'project' ? projects.find((p) => p.id === route.id)?.name ?? 'Project'
     : chats.find((c) => c.id === route.id)?.title ?? 'New chat';
 
+
+  async function quit() {
+    await request('/quit', { method: 'POST' }).catch(() => {});
+    document.body.innerHTML = '<p class="stopped">HFee AI has stopped. You can close this tab.</p>';
+  }
+
   return (
     <div className="shell">
       <header className="topbar">
@@ -63,7 +69,11 @@ export default function Shell({ user, route, chats, projects, query, onQuery, on
           </button>
           <span className="avatar" title={user.email}>{user.name.charAt(0).toUpperCase()}</span>
           <span className="account-name">{user.name}</span>
-          <button className="link" onClick={onSignOut}>Sign out</button>
+          {desktop ? (
+            <button className="link" onClick={quit}>Quit</button>
+          ) : (
+            !user.local && <button className="link" onClick={onSignOut}>Sign out</button>
+          )}
         </div>
       </header>
 

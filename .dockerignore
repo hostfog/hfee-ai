@@ -1,0 +1,11 @@
+node_modules
+dist
+data
+.env
+.git
+hfee-ai-server*
+desktop/build
+mobile/node_modules
+mobile/android
+mobile/ios
+.env.docker

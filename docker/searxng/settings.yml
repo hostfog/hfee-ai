@@ -1,0 +1,7 @@
+# Web search for HFee AI. The secret comes from SEARXNG_SECRET.
+use_default_settings: true
+server:
+  limiter: false
+  image_proxy: false
+search:
+  formats: [html, json]

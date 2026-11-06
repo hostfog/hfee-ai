@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>CFBundleName</key><string>HFee AI</string>
+  <key>CFBundleDisplayName</key><string>HFee AI</string>
+  <key>CFBundleIdentifier</key><string>com.hostfog.hfee-ai</string>
+  <key>CFBundleExecutable</key><string>hfee-ai</string>
+  <key>CFBundleIconFile</key><string>icon.icns</string>
+  <key>CFBundlePackageType</key><string>APPL</string>
+  <key>CFBundleVersion</key><string>@VERSION@</string>
+  <key>CFBundleShortVersionString</key><string>@VERSION@</string>
+  <key>LSMinimumSystemVersion</key><string>11.0</string>
+  <!-- No Dock icon: the app lives in the browser and stops with Quit. -->
+  <key>LSUIElement</key><true/>
+</dict>
+</plist>

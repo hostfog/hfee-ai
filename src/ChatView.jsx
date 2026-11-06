@@ -6,6 +6,7 @@ import Composer from './Composer';
 import Message from './Message';
 import Preview from './Preview';
 import { HFMark, ShareIcon, UploadIcon } from './icons';
+import { Models } from './Admin';
 
 const SUGGESTIONS = [
   { title: 'Explain a concept', prompt: 'Explain how Raft consensus works' },
@@ -180,7 +181,7 @@ export default function ChatView({ chatId, project, user, config, onChatsChanged
               ))}
             </select>
           ) : (
-            <span className="model-name">{model}</span>
+            config.models.length === 1 && <span className="model-name">{model}</span>
           )}
           {project && <span className="badge">Project: {project.name}</span>}
           {chat && (
@@ -191,7 +192,22 @@ export default function ChatView({ chatId, project, user, config, onChatsChanged
         </div>
 
         <section className="messages">
-          {messages.length === 0 ? (
+          {config.models.length === 0 ? (
+            <div className="empty">
+              <div className="heading">
+                <HFMark size={44} />
+                <div>
+                  <h1>Download a model to start</h1>
+                  <p>
+                    {user.role === 'admin'
+                      ? 'qwen2.5:3b is a good first choice: about 2 GB and quick on most computers.'
+                      : 'No models are installed yet. Ask the site admin to add one.'}
+                  </p>
+                </div>
+              </div>
+              {user.role === 'admin' && <Models models={[]} suggest="qwen2.5:3b" onChange={() => window.location.reload()} />}
+            </div>
+          ) : messages.length === 0 ? (
             <div className="empty">
               <div className="heading">
                 <HFMark size={44} />

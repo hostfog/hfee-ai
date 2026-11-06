@@ -17,4 +17,19 @@ jobs:
       - run: npm ci
       - run: npm run build
       - run: for f in server/*.js; do node --check "$f"; done
-      - run: shellcheck deploy/*.sh
+      - run: shellcheck -x deploy/*.sh docker/*.sh
+
+  desktop:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: desktop/launcher
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: desktop/launcher/go.mod
+      - run: test -z "$(gofmt -l .)"
+      - run: go vet ./...
+      - run: GOOS=windows go vet ./...
+      - run: GOOS=darwin go vet ./...

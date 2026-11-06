@@ -148,6 +148,7 @@ export function setSetting(key, value) {
 
 // limitsFor returns the user's plan limits (the first plan when none is set).
 export function limitsFor(user) {
+  if (user.local) return { daily_messages: Infinity, daily_images: Infinity };
   return (
     db.prepare('SELECT * FROM plans WHERE id = ?').get(user.plan_id ?? -1) ??
     db.prepare('SELECT * FROM plans ORDER BY id LIMIT 1').get()

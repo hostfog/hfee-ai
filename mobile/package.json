@@ -1,0 +1,21 @@
+{
+  "name": "hfee-ai-mobile",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Android and iOS apps for an HFee AI site",
+  "type": "module",
+  "scripts": {
+    "android": "node scripts/prepare.js android",
+    "ios": "node scripts/prepare.js ios"
+  },
+  "dependencies": {
+    "@capacitor/android": "^8.6.0",
+    "@capacitor/core": "^8.6.0",
+    "@capacitor/ios": "^8.6.0"
+  },
+  "devDependencies": {
+    "@capacitor/assets": "^3.0.5",
+    "@capacitor/cli": "^8.6.0",
+    "typescript": "^5.9.3"
+  }
+}

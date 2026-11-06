@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=HFee AI
+Comment=Your own AI, running on this computer
+Exec=hfee-ai
+Icon=hfee-ai
+Terminal=false
+Categories=Utility;Development;

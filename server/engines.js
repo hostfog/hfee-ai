@@ -9,6 +9,7 @@ import crypto from 'node:crypto';
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
+import { getSetting } from './db.js';
 
 const env = process.env;
 
@@ -36,6 +37,14 @@ export async function listModels() {
   } catch {
     return [env.AI_MODEL];
   }
+}
+
+// defaultModel is the admin's choice, or the first installed model if that
+// one is missing (e.g. the desktop app before its first download finishes).
+export async function defaultModel(models) {
+  models ??= await listModels();
+  const preferred = getSetting('default_model', env.AI_MODEL);
+  return models.includes(preferred) ? preferred : (models[0] ?? preferred);
 }
 
 export const VISION_MODEL = 'vision';
