@@ -1,0 +1,34 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: hostfog/hfee
+          path: hfee
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+      - name: Build the server package
+        run: |
+          HFEE_SRC=hfee bash deploy/package.sh
+          tar -xzf hfee-ai-server.tar.gz
+          zip -qr hfee-ai-server.zip hfee-ai-server
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" hfee-ai-server.tar.gz hfee-ai-server.zip --generate-notes
