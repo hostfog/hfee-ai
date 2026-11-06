@@ -18,7 +18,7 @@ for arch in amd64 arm64; do
   (cd "$HFEE_SRC" && CGO_ENABLED=0 GOOS=linux GOARCH=$arch go build -trimpath -ldflags="-s -w" -o "$OUT/bin/hfee-linux-$arch" ./cmd/hfee)
 done
 
-cp "$ROOT/deploy/install.sh" "$ROOT/deploy/engines.sh" "$ROOT/deploy/os.sh" "$ROOT/deploy/versions.sh" "$OUT/"
+cp "$ROOT/deploy/install.sh" "$ROOT/deploy/engines.sh" "$ROOT/deploy/os.sh" "$ROOT/deploy/versions.sh" "$ROOT/deploy/uninstall.sh" "$OUT/"
 tar -czf "$ROOT/hfee-ai-server.tar.gz" -C "$ROOT" hfee-ai-server
 rm -rf "$OUT"
 echo "Created $ROOT/hfee-ai-server.tar.gz"
