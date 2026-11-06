@@ -29,6 +29,7 @@ export default function SharedChat({ shareId }) {
         <section className="messages">
           {error && <div className="notice">{error}</div>}
           {chat?.messages.map((m, i) => <Message key={i} message={m} />)}
+          <p className="made-by">Shared from HFee AI by HostFog Ltd</p>
         </section>
       </main>
     </div>

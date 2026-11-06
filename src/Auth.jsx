@@ -88,6 +88,7 @@ export default function Auth({ onSignedIn }) {
           </p>
         )}
       </form>
+      <p className="made-by">© {new Date().getFullYear()} HostFog Ltd</p>
     </div>
   );
 }

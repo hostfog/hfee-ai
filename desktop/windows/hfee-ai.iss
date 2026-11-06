@@ -9,6 +9,7 @@ AppId={{6F1C2B9E-4A57-4C3E-9D61-2E8F0B7A5C14}
 AppName=HFee AI
 AppVersion={#Version}
 AppPublisher=HostFog Ltd
+AppCopyright=© 2026 HostFog Ltd
 AppPublisherURL=https://github.com/hostfog/hfee-ai
 DefaultDirName={autopf}\HFee AI
 DefaultGroupName=HFee AI

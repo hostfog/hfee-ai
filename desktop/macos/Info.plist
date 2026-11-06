@@ -10,6 +10,7 @@
   <key>CFBundlePackageType</key><string>APPL</string>
   <key>CFBundleVersion</key><string>@VERSION@</string>
   <key>CFBundleShortVersionString</key><string>@VERSION@</string>
+  <key>NSHumanReadableCopyright</key><string>© 2026 HostFog Ltd</string>
   <key>LSMinimumSystemVersion</key><string>11.0</string>
   <!-- No Dock icon: the app lives in the browser and stops with Quit. -->
   <key>LSUIElement</key><true/>

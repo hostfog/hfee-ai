@@ -1,6 +1,8 @@
 {
   "name": "hfee-ai",
   "version": "1.0.0",
+  "author": "HostFog Ltd",
+  "license": "MIT",
   "private": true,
   "type": "module",
   "scripts": {

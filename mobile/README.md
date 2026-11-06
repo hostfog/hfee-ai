@@ -1,5 +1,7 @@
 # HFee AI for Android and iOS
 
+By HostFog Ltd.
+
 The apps open your HFee AI site in a full-screen app with its own icon,
 microphone and camera access. They need your site to be online first.
 

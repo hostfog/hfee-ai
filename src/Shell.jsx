@@ -151,7 +151,7 @@ export default function Shell({ user, route, chats, projects, query, onQuery, on
             )}
           </nav>
 
-          <div className="sidebar-foot">HostFog Ltd</div>
+          <div className="sidebar-foot">© {new Date().getFullYear()} HostFog Ltd</div>
         </aside>
         {open && <div className="scrim" onClick={() => setOpen(false)} />}
 

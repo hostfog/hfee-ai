@@ -1,6 +1,8 @@
 {
   "name": "hfee-ai-mobile",
   "version": "1.0.0",
+  "author": "HostFog Ltd",
+  "license": "MIT",
   "private": true,
   "description": "Android and iOS apps for an HFee AI site",
   "type": "module",

@@ -1,5 +1,7 @@
 # HFee AI
 
+By [HostFog Ltd](https://github.com/hostfog).
+
 A self-hosted AI assistant. Chat runs on [HFee](https://github.com/hostfog/hfee)
 or any OpenAI-compatible API; optional open-source engines add vision, image
 generation, voice, web search and a Python sandbox.
@@ -137,3 +139,7 @@ then enable them in Admin → Site.
 
 On a CPU-only server an image takes about a minute, so image requests take
 turns. The code sandbox has no network and no access to the rest of the server.
+
+## Licence
+
+MIT © 2026 HostFog Ltd. The models and engines above keep their own licences.
